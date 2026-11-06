@@ -1,0 +1,198 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Hamlet Pump – installation",
+        "description": "1 of 3: what kind of pump installation is this?",
+        "data": {
+          "pump_type": "Installation",
+          "name": "Name",
+          "pump_switch": "Pump switch (relay / contactor)"
+        },
+        "data_description": {
+          "pump_type": "Pick what this pump does. You can add another pump later – the Pumps page shows tabs.",
+          "name": "Shown on the Pumps page, e.g. Borehole, House pump, Garden.",
+          "pump_switch": "Shelly, Sonoff or contactor relay that switches the pump. Needed for a borehole. Optional for a pressure pump the VFD runs on its own (then the app only monitors)."
+        }
+      },
+      "sensors": {
+        "title": "Sensors",
+        "description": "2 of 3: map what the installation has. Everything is optional – the more you map, the better the protection and water readings.",
+        "data": {
+          "pump_power": "Pump power (W)",
+          "pump_current": "Pump current (A)",
+          "pump_hz": "VFD frequency (Hz)",
+          "running_status": "Pump running signal",
+          "vfd_fault": "VFD fault / alarm",
+          "pressure": "Water pressure",
+          "flow": "Flow (L/min)",
+          "water_total": "Water meter total",
+          "tank_level": "Tank level (%)",
+          "tank_full": "Tank FULL float / probe",
+          "tank_low": "Tank LOW float / probe",
+          "floats_invert": "Floats report the other way round"
+        },
+        "data_description": {
+          "pump_power": "Shelly power, or the VFD's output power. Used for dry-run / overload protection and energy.",
+          "pump_current": "VFD output current. Use this for dry-run / overload if there's no power reading.",
+          "pump_hz": "VFD output frequency. Above 0 Hz = pump running. Also scales the water and energy estimate.",
+          "running_status": "VFD 'running' status or a pressure-switch contact. Optional – otherwise worked out from Hz, power or the relay.",
+          "vfd_fault": "VFD fault code or alarm sensor. 0 / OK / off = no fault.",
+          "pressure": "Pressure transducer or VFD pressure reading. bar, kPa, psi are converted.",
+          "flow": "Flow sensor. L/min, L/h and m³/h are converted.",
+          "water_total": "Water meter that counts up (L or m³). Most accurate water use.",
+          "tank_level": "Borehole: the tank being filled. Pressure pump / irrigation: the supply tank (protects the pump when it runs low).",
+          "tank_full": "ON when the tank is full.",
+          "tank_low": "ON when the tank is low / empty.",
+          "floats_invert": "Tick if your floats are ON when the water is NOT at that point."
+        }
+      },
+      "zones": {
+        "title": "Irrigation zones",
+        "description": "3 of 3: the valve relays and an optional rain sensor.",
+        "data": {
+          "zones": "Irrigation valves (zones)",
+          "rain_sensor": "Rain sensor"
+        },
+        "data_description": {
+          "zones": "Valve relays, in watering order. The pump only runs while a zone is open. Leave empty to just run the pump.",
+          "rain_sensor": "ON / wet = skip watering. Optional."
+        }
+      }
+    },
+    "error": {
+      "switch_required": "A borehole pump needs a switch (relay / contactor) so the app can fill the tank.",
+      "zones_or_switch": "Map at least the pump switch or one valve."
+    },
+    "abort": {
+      "already_configured": "This pump switch is already set up."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Change pump",
+        "description": "1 of 3: what kind of pump installation is this?",
+        "data": {
+          "pump_type": "Installation",
+          "name": "Name",
+          "pump_switch": "Pump switch (relay / contactor)"
+        },
+        "data_description": {
+          "pump_type": "Pick what this pump does. You can add another pump later – the Pumps page shows tabs.",
+          "name": "Shown on the Pumps page, e.g. Borehole, House pump, Garden.",
+          "pump_switch": "Shelly, Sonoff or contactor relay that switches the pump. Needed for a borehole. Optional for a pressure pump the VFD runs on its own (then the app only monitors)."
+        }
+      },
+      "sensors": {
+        "title": "Sensors",
+        "description": "2 of 3: map what the installation has. Everything is optional – the more you map, the better the protection and water readings.",
+        "data": {
+          "pump_power": "Pump power (W)",
+          "pump_current": "Pump current (A)",
+          "pump_hz": "VFD frequency (Hz)",
+          "running_status": "Pump running signal",
+          "vfd_fault": "VFD fault / alarm",
+          "pressure": "Water pressure",
+          "flow": "Flow (L/min)",
+          "water_total": "Water meter total",
+          "tank_level": "Tank level (%)",
+          "tank_full": "Tank FULL float / probe",
+          "tank_low": "Tank LOW float / probe",
+          "floats_invert": "Floats report the other way round"
+        },
+        "data_description": {
+          "pump_power": "Shelly power, or the VFD's output power. Used for dry-run / overload protection and energy.",
+          "pump_current": "VFD output current. Use this for dry-run / overload if there's no power reading.",
+          "pump_hz": "VFD output frequency. Above 0 Hz = pump running. Also scales the water and energy estimate.",
+          "running_status": "VFD 'running' status or a pressure-switch contact. Optional – otherwise worked out from Hz, power or the relay.",
+          "vfd_fault": "VFD fault code or alarm sensor. 0 / OK / off = no fault.",
+          "pressure": "Pressure transducer or VFD pressure reading. bar, kPa, psi are converted.",
+          "flow": "Flow sensor. L/min, L/h and m³/h are converted.",
+          "water_total": "Water meter that counts up (L or m³). Most accurate water use.",
+          "tank_level": "Borehole: the tank being filled. Pressure pump / irrigation: the supply tank (protects the pump when it runs low).",
+          "tank_full": "ON when the tank is full.",
+          "tank_low": "ON when the tank is low / empty.",
+          "floats_invert": "Tick if your floats are ON when the water is NOT at that point."
+        }
+      },
+      "zones": {
+        "title": "Irrigation zones",
+        "description": "3 of 3: the valve relays and an optional rain sensor.",
+        "data": {
+          "zones": "Irrigation valves (zones)",
+          "rain_sensor": "Rain sensor"
+        },
+        "data_description": {
+          "zones": "Valve relays, in watering order. The pump only runs while a zone is open. Leave empty to just run the pump.",
+          "rain_sensor": "ON / wet = skip watering. Optional."
+        }
+      }
+    },
+    "error": {
+      "switch_required": "A borehole pump needs a switch (relay / contactor) so the app can fill the tank.",
+      "zones_or_switch": "Map at least the pump switch or one valve."
+    }
+  },
+  "selector": {
+    "pump_type": {
+      "options": {
+        "borehole": "Borehole / pump filling a tank (JoJo)",
+        "booster": "Pressure / booster pump (house supply)",
+        "irrigation": "Irrigation pump (watering programs and zones)"
+      }
+    }
+  },
+  "entity": {
+    "select": {
+      "mode": {
+        "name": "Mode",
+        "state": {
+          "auto": "Auto",
+          "run": "Timed run",
+          "on": "On",
+          "off": "Off"
+        }
+      }
+    },
+    "button": {
+      "reset": {
+        "name": "Reset fault"
+      },
+      "run": {
+        "name": "Run now"
+      }
+    },
+    "binary_sensor": {
+      "running": {
+        "name": "Running"
+      },
+      "fault": {
+        "name": "Fault"
+      }
+    },
+    "sensor": {
+      "status": {
+        "name": "Status"
+      },
+      "pump_power": {
+        "name": "Pump power"
+      },
+      "flow": {
+        "name": "Flow"
+      },
+      "water_today": {
+        "name": "Water today"
+      },
+      "energy_today": {
+        "name": "Energy today"
+      },
+      "run_time_today": {
+        "name": "Run time today"
+      },
+      "starts_today": {
+        "name": "Starts today"
+      }
+    }
+  }
+}

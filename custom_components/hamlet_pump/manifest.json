@@ -1,0 +1,20 @@
+{
+  "domain": "hamlet_pump",
+  "name": "Hamlet Pump",
+  "codeowners": [
+    "@wesselswynand2-prog"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "http",
+    "frontend",
+    "panel_custom",
+    "websocket_api"
+  ],
+  "documentation": "https://github.com/wesselswynand2-prog/hamlet-pump",
+  "integration_type": "device",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/wesselswynand2-prog/hamlet-pump/issues",
+  "requirements": [],
+  "version": "1.0.0"
+}
