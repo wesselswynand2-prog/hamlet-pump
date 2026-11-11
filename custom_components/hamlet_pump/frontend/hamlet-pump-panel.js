@@ -412,9 +412,7 @@ class HamletPumpPanel extends HTMLElement {
 
   _zonesHtml(s, running) {
     const L = s.live || {}; const d = s.decision || {};
-    if (!s.zones.length) {
-      return `<div class="zone ${running ? "on" : ""}">${sprinkler(running)}<span class="zn">Pump only (no valves mapped)</span><span class="small muted">${running ? "watering" : ""}</span></div>`;
-    }
+    if (!s.zones.length) return "";   // no valves mapped: nothing to show
     return `<div class="zones">${s.zones.map((z, i) => {
       const open = !!(L.zones || [])[i]; const active = d.on && d.zone === i;
       return `<div class="zone ${open ? "on" : ""}">${sprinkler(open)}<span class="zn">${i + 1}. ${esc(z)}</span>

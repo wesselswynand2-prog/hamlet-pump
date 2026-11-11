@@ -1,6 +1,6 @@
 """Constants for Hamlet Pump."""
 DOMAIN = "hamlet_pump"
-VERSION = "1.1.0"
+VERSION = "1.1.1"
 
 PANEL_URL_PATH = "hamlet-pump"
 PANEL_COMPONENT = "hamlet-pump-panel"
