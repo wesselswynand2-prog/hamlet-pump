@@ -37,6 +37,11 @@ const STYLE = `
 .toolbar { display: flex; align-items: center; gap: 8px; height: var(--header-height, 56px); padding: 0 12px;
   background: var(--app-header-background-color, var(--primary-color)); color: var(--app-header-text-color, #fff);
   border-bottom: var(--app-header-border-bottom, none); position: sticky; top: 0; z-index: 2; }
+.backbtn { display: inline-flex; align-items: center; gap: 4px; font: inherit; font-size: 14px; padding: 6px 12px 6px 8px; border-radius: 18px; cursor: pointer;
+  border: 1px solid rgba(255,255,255,.5); background: rgba(255,255,255,.15); color: inherit; }
+.backbtn[hidden] { display: none; }
+.backbtn ha-icon { --mdc-icon-size: 18px; }
+:host([embedded]) .backbtn { display: none; }
 .toolbar .title { font-size: 20px; font-weight: 400; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tabs { display: flex; gap: 4px; overflow-x: auto; }
 .tabs button { background: transparent; border: 0; color: inherit; opacity: .7; padding: 8px 12px; font: inherit; cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
@@ -262,6 +267,18 @@ class HamletPumpPanel extends HTMLElement {
   set panel(v) { this._panel = v; }
   set route(v) { this._route = v; }
 
+  /** "Back" shows when another page (e.g. the Farm map) opened this one with ?back=/its/page */
+  _back() {
+    const b = new URLSearchParams(location.search).get("back");
+    return b && /^\/[a-z0-9_-]+(\?[a-z0-9_=&.%-]*)?$/i.test(b) && location.pathname.startsWith("/hamlet-pump") ? b : null;
+  }
+  _updateBack() { const el = this.shadowRoot?.getElementById("back"); if (el) el.hidden = !this._back(); }
+  _goBack() {
+    const b = this._back(); if (!b) return;
+    history.pushState(null, "", b);
+    window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false } }));
+  }
+
   connectedCallback() {
     if (this._hass && !this._unsub && this._entryId) this._subscribe();
     this._histTimer = setInterval(() => this._loadState(), 5 * 60 * 1000);
@@ -275,13 +292,16 @@ class HamletPumpPanel extends HTMLElement {
   async _init() {
     const root = this.shadowRoot;
     root.innerHTML = `<style>${STYLE}</style>
-      <div class="toolbar"><span id="menu"></span><div class="title">Pumps</div><div class="tabs" role="tablist"></div></div>
+      <div class="toolbar"><span id="menu"></span><button class="backbtn" id="back" hidden><ha-icon icon="mdi:arrow-left"></ha-icon>Back</button><div class="title">Pumps</div><div class="tabs" role="tablist"></div></div>
       <main><div class="card span2 loading">Loading…</div></main>`;
     this._main = root.querySelector("main");
     const mb = document.createElement("ha-menu-button");
     mb.hass = this._hass; mb.narrow = this._narrow;
     root.getElementById("menu").appendChild(mb);
     this._menuBtn = mb;
+    this._updateBack();
+    window.addEventListener("location-changed", () => setTimeout(() => this._updateBack(), 50));
+    root.getElementById("back").addEventListener("click", () => this._goBack());
     root.addEventListener("click", (ev) => this._click(ev));
     root.addEventListener("input", (ev) => this._input(ev));
     root.addEventListener("change", (ev) => this._input(ev));
