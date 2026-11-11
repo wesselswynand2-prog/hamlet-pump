@@ -368,7 +368,7 @@ class HamletPumpPanel extends HTMLElement {
   _color(d, s) {
     if (!d) return "var(--muted)";
     if (s.fault || ["Fault", "VFD fault", "Offline"].includes(d.status)) return "var(--c-bad)";
-    if (["Resting", "Tank low", "Rain skip", "Rain delay", "Waiting"].includes(d.status)) return "var(--c-warn)";
+    if (["Resting", "Tank low", "Rain skip", "Rain delay", "Waiting", "Load shed"].includes(d.status)) return "var(--c-warn)";
     if (this._snap.live?.running) return "var(--c-run)";
     if (d.status === "Off") return "var(--muted)";
     return "var(--c-water)";
@@ -633,6 +633,16 @@ class HamletPumpPanel extends HTMLElement {
     if (t !== "borehole" && (f.level || f.tank_low)) {
       right += `<h3>Supply tank</h3><div class="form">` + (f.level ? this._field("supply_low_level", "Stop the pump below", "%") + this._field("supply_restart_level", "Start again above", "%") : `<div class="small muted" style="padding:8px 0">Stops while the low float is on.</div>`) + `</div>`;
     }
+    right += `<h3>Load sharing</h3>` + (f.load ? `<div class="small muted" style="padding:2px 0 6px">Stops this pump when the supply runs short of spare capacity and restarts it when there's room again.
+        With two pumps on one supply, give the pump that must stop first the higher levels – they then drop out and come back one at a time.
+        Now: <b>${num(L.spare_kva) == null ? "–" : `${num(L.spare_kva).toFixed(1)} kVA spare`}</b></div><div class="form">`
+        + `<div class="field"><label>The panel meter shows<span class="hint">Configure → Load sharing sensor</span></label><span class="ctl"><select data-k="load_mode"><option value="spare" ${this._draft.load_mode === "spare" ? "selected" : ""}>Spare kVA left</option><option value="used" ${this._draft.load_mode === "used" ? "selected" : ""}>Load in use (kVA / kW)</option></select></span></div>`
+        + (this._draft.load_mode === "used" ? this._field("supply_kva", "Supply size", "kVA", "Transformer or NMD") : "")
+        + this._field("shed_below_kva", "Stop the pump below", "kVA spare", "0 = off", 'step="0.5"')
+        + this._field("restore_above_kva", "Start again above", "kVA spare", "Higher than stop + this pump's own kVA", 'step="0.5"')
+        + this._field("shed_seconds", "Low for at least", "s", "Ignores motor-start peaks")
+        + this._field("restore_minutes", "High for at least", "min", "Before restarting") + `</div>`
+      : `<div class="small muted" style="padding:2px 0 8px">Map a panel meter (spare kVA, or the load in use) under Configure → <i>Load sharing</i> to stop and start this pump with the load on the supply.</div>`);
     right += `<h3>General</h3><div class="form">` + (f.power ? "" : this._field("rated_w", "Pump rating", "W", "Energy estimate – no meter"))
       + (f.flow || f.meter ? "" : this._field("flow_lpm", "Pump flow at full speed", "L/min", "Water estimate – no flow sensor or meter"))
       + this._field("min_switch_seconds", "Minimum time before a restart", "s", "Protects relay and motor")
@@ -716,6 +726,7 @@ class HamletPumpPanel extends HTMLElement {
       this._draft[k] = t.type === "checkbox" ? t.checked : t.type === "number" ? (t.value === "" ? "" : Number(t.value)) : t.value;
       this._dirty = true;
       if (k === "hours_enabled" && ev.type === "change") this._renderClient();
+      if (k === "load_mode" && ev.type === "change") this._renderAdmin();
     } else if (t.dataset.list) {
       const [k, i, field, j] = t.dataset.list.split(":");
       const it = this._draft[k][Number(i)];

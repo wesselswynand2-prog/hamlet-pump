@@ -19,6 +19,7 @@ from .const import (
     CONF_FLOW,
     CONF_NAME,
     CONF_PRESSURE,
+    CONF_LOAD,
     CONF_PUMP_CURRENT,
     CONF_PUMP_HZ,
     CONF_PUMP_POWER,
@@ -119,6 +120,8 @@ class PumpController:
         st = data.get("state", {})
         self.state.fault = st.get("fault")
         self.state.retries = int(st.get("retries", 0))
+        self.state.shed = bool(st.get("shed", False))     # still load-shed after a restart
+        self.state.resume = bool(st.get("resume", False))
         if st.get("rest_until"):
             self.state.rest_until = dt_util.parse_datetime(st["rest_until"])
             self.state.rest_why = st.get("rest_why", "Resting")
@@ -145,7 +148,7 @@ class PumpController:
             "run_until": self.run_until.isoformat() if self.run_until else None,
             "manual_zone": self.manual_zone,
             "rain_delay_until": self.rain_delay_until.isoformat() if self.rain_delay_until else None,
-            "state": {"fault": st.fault, "retries": st.retries, "rest_why": st.rest_why,
+            "state": {"fault": st.fault, "retries": st.retries, "rest_why": st.rest_why, "shed": st.shed, "resume": st.resume,
                       "rest_until": st.rest_until.isoformat() if st.rest_until else None},
             "history": self.history,
             "daily": self.daily,
@@ -281,7 +284,28 @@ class PumpController:
             rain=self._bool(c.get(CONF_RAIN)),
             rain_delay_until=self.rain_delay_until,
             zone_count=len(self.zones),
+            spare_kva=self._spare_kva(),
+            load_sensor=bool(c.get(CONF_LOAD)),
         )
+
+    def _spare_kva(self) -> float | None:
+        """Spare capacity on the supply in kVA, from the panel meter (load sharing)."""
+        st = self._state(self.conf.get(CONF_LOAD))
+        if st is None:
+            return None
+        try:
+            v = float(st.state)
+        except (TypeError, ValueError):
+            return None
+        unit = (st.attributes.get("unit_of_measurement") or "").strip()
+        if unit in ("W", "VA"):
+            v /= 1000
+        elif unit in ("MW", "MVA"):
+            v *= 1000
+        if self.settings.get("load_mode") == "used":
+            size = float(self.settings.get("supply_kva") or 0)
+            return round(size - v, 2) if size > 0 else None
+        return round(v, 2)
 
     # -------------------------------------------------------------- decision
     async def async_evaluate(self) -> None:
@@ -295,8 +319,14 @@ class PumpController:
 
     async def _evaluate(self) -> None:
         inp = self.read_inputs()
-        prev_fault, prev_rest = self.state.fault, self.state.rest_until
+        prev_fault, prev_rest, prev_shed = self.state.fault, self.state.rest_until, self.state.shed
         d = logic.decide(inp, self.settings, self.state)
+        if self.state.shed != prev_shed:   # load sharing: log it on the page, no notification (it's normal)
+            spare = "–" if inp.spare_kva is None else f"{inp.spare_kva:.1f} kVA"
+            self.events.append({"t": inp.now.isoformat(), "kind": "load",
+                                "msg": f"Stopped for load sharing – {spare} spare" if self.state.shed else f"Load back down – {spare} spare, pump released"})
+            self.events = self.events[-30:]
+            self._save()
         if d.run_expired and self.mode == "run":
             self.mode, self.run_until, self.manual_zone = "auto", None, None
             self._save()
@@ -331,6 +361,8 @@ class PumpController:
             "starts_hour": len(self.state.starts),
             "retries": self.state.retries,
             "cmd_error": self._cmd_error,
+            "spare_kva": inp.spare_kva,
+            "shed": self.state.shed,
         }
         self._notify()
 
@@ -550,6 +582,10 @@ class PumpController:
             hi = cleaned.get("stop_level", self.settings["stop_level"])
             if lo >= hi:
                 raise ValueError("Start level must be below the stop level")
+        shed = cleaned.get("shed_below_kva", self.settings["shed_below_kva"])
+        back = cleaned.get("restore_above_kva", self.settings["restore_above_kva"])
+        if shed and back <= shed:
+            raise ValueError("'Start again above' must be higher than 'Stop below' – leave room for the pump itself")
         self.settings.update(cleaned)
         self._save()
         await self.async_evaluate()
@@ -599,6 +635,7 @@ class PumpController:
                 "tank_full": bool(c.get(CONF_TANK_FULL)),
                 "tank_low": bool(c.get(CONF_TANK_LOW)),
                 "rain": bool(c.get(CONF_RAIN)),
+                "load": bool(c.get(CONF_LOAD)),
                 "water": self.water_source(),
             },
         }

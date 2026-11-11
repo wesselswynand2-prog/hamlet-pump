@@ -156,7 +156,7 @@ class HamletPumpCard extends HTMLElement {
     const d = s.decision || {}; const L = s.live || {}; const f = s.features || {}; const T = s.today || {};
     const run = !!L.running;
     const color = s.fault || ["Fault", "VFD fault", "Offline"].includes(d.status) ? "var(--c-bad)"
-      : ["Resting", "Tank low", "Rain skip", "Rain delay", "Waiting"].includes(d.status) ? "var(--c-warn)" : run ? "var(--c-run)" : d.status === "Off" ? "var(--muted)" : "var(--c-water)";
+      : ["Resting", "Tank low", "Rain skip", "Rain delay", "Waiting", "Load shed"].includes(d.status) ? "var(--c-warn)" : run ? "var(--c-run)" : d.status === "Off" ? "var(--muted)" : "var(--c-water)";
     const st = (icon, ic, l, v) => `<div class="stat" style="--ic:${ic}"><ha-icon icon="${icon}"></ha-icon><span class="l">${l}</span><span class="v">${v}</span></div>`;
     const stats = [];
     if (f.pressure && s.type !== "booster") stats.push(st("mdi:gauge", "var(--c-water)", "Pressure", `${num(L.pressure)?.toFixed(1) ?? "–"} bar`));

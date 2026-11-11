@@ -65,7 +65,15 @@ DEFAULT_SETTINGS: dict = {
     ],
     "rain_skip": True,
     "valve_lead_seconds": 3,         # open the valve before the pump starts
+    # Load sharing: stop the pump when the supply (transformer / NMD) has too little spare capacity
+    "load_mode": "spare",            # spare = the load sensor shows spare kVA | used = it shows the load in use
+    "supply_kva": 0,                 # 'used' mode: size of the supply (transformer / NMD) in kVA
+    "shed_below_kva": 0,             # stop when spare capacity drops below this (0 = off)
+    "restore_above_kva": 0,          # start again when spare capacity is back above this
+    "shed_seconds": 10,              # spare must stay low this long (ignores motor-start peaks)
+    "restore_minutes": 5,            # spare must stay high this long before restarting
 }
+LOAD_MODES = ["spare", "used"]
 
 USER_KEYS = {
     "start_level", "stop_level", "hours_enabled", "hours_start", "hours_end", "schedules",
@@ -83,6 +91,8 @@ _NUM_RANGES = {
     "low_pressure_bar": (0, 20), "low_pressure_seconds": (5, 3600), "max_continuous_minutes": (0, 1440),
     "max_starts_per_hour": (0, 600), "supply_low_level": (0, 100), "supply_restart_level": (0, 100),
     "valve_lead_seconds": (0, 60),
+    "supply_kva": (0, 100000), "shed_below_kva": (0, 100000), "restore_above_kva": (0, 100000),
+    "shed_seconds": (0, 600), "restore_minutes": (0, 240),
 }
 _BOOLS = {"hours_enabled", "rain_skip"}
 _TIMES = {"hours_start", "hours_end"}
@@ -111,6 +121,8 @@ class Inputs:
     rain: bool | None = None
     rain_delay_until: datetime | None = None
     zone_count: int = 0
+    spare_kva: float | None = None       # spare supply capacity (from the load sensor)
+    load_sensor: bool = False            # a load sensor is configured
 
 
 @dataclass
@@ -130,6 +142,7 @@ class State:
     full_seen: bool = False
     resume: bool = False                  # a rest interrupted filling: carry on when it's over
     alerts_sent: dict = field(default_factory=dict)
+    shed: bool = False                    # stopped for load sharing
 
 
 @dataclass
@@ -385,6 +398,10 @@ def _decide(inp: Inputs, s: dict, st: State, alerts: list) -> Decision:
             return Decision(False, "Resting", f"{st.rest_why} – {left:.0f} min left")
         st.rest_until, st.rest_why = None, ""
 
+    shed = _load_share(inp, s, st)
+    if shed:
+        return shed
+
     # booster / irrigation: protect the pump when its supply tank runs low
     if t in ("booster", "irrigation"):
         low = None
@@ -420,6 +437,39 @@ def _decide(inp: Inputs, s: dict, st: State, alerts: list) -> Decision:
     if inp.mode == "on":
         return Decision(True, "On", "Manual on – protection still active", source="manual")
     return _auto(inp, s, st)
+
+
+def _load_share(inp: Inputs, s: dict, st: State) -> Decision | None:
+    """Load sharing: stop while the supply has too little spare capacity, restart when it is back.
+
+    Several pumps on one supply share it by giving each its own levels – the pump that should stop
+    first gets the highest 'stop below' – so they drop out and come back one at a time.
+    """
+    below, back = float(s.get("shed_below_kva") or 0), float(s.get("restore_above_kva") or 0)
+    if below <= 0 or not inp.load_sensor:
+        st.shed = False
+        return None
+    now, spare = inp.now, inp.spare_kva
+    back = max(back, below)
+    if spare is not None:
+        if not st.shed:
+            if _timer(st, "shed", spare < below, now) >= float(s["shed_seconds"]):
+                st.shed = True
+                st.timers.pop("shed", None)
+                if inp.running or inp.is_on:
+                    st.resume = True    # carry on filling when the load is back down
+        elif _timer(st, "unshed", spare >= back, now) >= float(s["restore_minutes"]) * 60:
+            st.shed = False
+            st.timers.pop("unshed", None)
+    if not st.shed:
+        return None
+    if spare is None:
+        return Decision(False, "Load shed", "Waiting for spare capacity – the load meter isn't reporting", tripped=True)
+    if spare >= back:
+        since = st.timers.get("unshed", now)
+        left = float(s["restore_minutes"]) * 60 - (now - since).total_seconds()
+        return Decision(False, "Load shed", f"Spare capacity back to {spare:.1f} kVA – restarting in {max(left, 0) / 60:.0f} min", tripped=True)
+    return Decision(False, "Load shed", f"Only {spare:.1f} kVA spare on the supply – stopped to share the load. Restarts above {back:.0f} kVA.", tripped=True)
 
 
 def _auto(inp: Inputs, s: dict, st: State) -> Decision:
@@ -515,6 +565,10 @@ def validate_settings(new: dict, admin: bool) -> dict:
         elif key in _TIMES:
             parse_hm(value)
             out[key] = str(value)[:5]
+        elif key == "load_mode":
+            if value not in LOAD_MODES:
+                raise ValueError("load_mode must be spare or used")
+            out[key] = value
         elif key == "leak_action":
             if value not in LEAK_ACTIONS:
                 raise ValueError("leak_action must be alert or stop")
@@ -531,6 +585,9 @@ def validate_settings(new: dict, admin: bool) -> dict:
             out[key] = [{"enabled": bool(x.get("enabled", True)), "name": str(x.get("name") or "Program")[:30],
                          "days": _valid_days(x.get("days", range(7))), "start": _hm(x["start"]),
                          "minutes": [max(0.0, min(float(m or 0), 240.0)) for m in x.get("minutes", [])][:16]} for x in value][:8]
+    shed, back = out.get("shed_below_kva"), out.get("restore_above_kva")
+    if shed and back is not None and back <= shed:
+        raise ValueError("'Start again above' must be higher than 'Stop below' – leave room for the pump itself")
     lo = out.get("start_level", new.get("start_level"))
     hi = out.get("stop_level", new.get("stop_level"))
     if lo is not None and hi is not None and float(lo) >= float(hi):

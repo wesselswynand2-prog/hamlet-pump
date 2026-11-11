@@ -45,6 +45,7 @@ Everything except the pump switch is optional – map what the installation has.
 | Tank FULL / LOW float | Float switch or probe on a Shelly input. Tick *Floats report the other way round* if needed. |
 | Irrigation valves | Valve relays in watering order (switch or valve entities) |
 | Rain sensor | ON / wet = skip watering |
+| Load sharing sensor | Panel meter at the supply: spare kVA left on the transformer / NMD, or the load in use (kVA / kW – then set the supply size). See *Load sharing*. |
 
 **How "running" is worked out:** running signal → else Hz > 0 → else power above 20 W (pressure-switch pumps on an always-on Shelly) → else the relay state.
 
@@ -71,6 +72,26 @@ Everything except the pump switch is optional – map what the installation has.
 A full tank always stops a borehole pump, even in *On* or *Run* mode. Protection is active in every mode except *Off*.
 
 Alerts appear in the Pumps page, as Home Assistant notifications and, if set, on a phone via *Send alerts to* (e.g. `notify.mobile_app_wynand`).
+
+## Load sharing (pumps and houses on one supply)
+
+When pumps share a transformer / NMD with houses, Hamlet Pump can stop a pump when the supply runs short of spare capacity and restart it when there is room again – instead of a separate automation.
+
+1. Configure → map the panel meter under **Load sharing sensor** (spare kVA, or the load in use).
+2. Installer settings → **Load sharing**: *Stop the pump below* and *Start again above* (kVA spare), plus how long it must stay low (ignores motor-start peaks, default 10 s) and high (default 5 min).
+3. **Two or more pumps:** give the pump that should stop first the **higher** levels. Example on a 100 kVA supply with two 11 kW pumps:
+
+| | Stop below | Start again above | High for |
+|---|---|---|---|
+| Pump 1 (stops first, starts last) | 15 kVA | 35 kVA | 10 min |
+| Pump 2 (stops last, starts first) | 8 kVA | 25 kVA | 5 min |
+
+   As the houses' load rises, pump 1 drops out first; if spare is still too low, pump 2 follows. When the load drops, pump 2 comes back, then pump 1.
+   *Start again above* must be more than *Stop below* plus the pump's own kVA, or the pump will stop and start over and over.
+
+While stopped the pump shows **Load shed** (orange) with the spare kVA; it isn't a fault and sends no notification (it is logged on the page). It works in Auto, Run and On; a borehole carries on filling when it restarts. If the panel meter stops reporting while a pump is shed, the pump stays off.
+
+**Turn off any old load-shedding automation** that switches these pumps – Hamlet Pump owns the relay and would switch it back.
 
 ## Modes
 

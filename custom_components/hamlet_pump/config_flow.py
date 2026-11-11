@@ -12,6 +12,7 @@ from homeassistant.helpers import selector
 from .const import (
     CONF_FLOATS_INVERT,
     CONF_FLOW,
+    CONF_LOAD,
     CONF_NAME,
     CONF_PRESSURE,
     CONF_PUMP_CURRENT,
@@ -73,6 +74,7 @@ def _sensor_schema() -> vol.Schema:
         vol.Optional(CONF_TANK_FULL): _ent(ON_OFF),
         vol.Optional(CONF_TANK_LOW): _ent(ON_OFF),
         vol.Required(CONF_FLOATS_INVERT, default=False): selector.BooleanSelector(),
+        vol.Optional(CONF_LOAD): _num(),
     })
 
 

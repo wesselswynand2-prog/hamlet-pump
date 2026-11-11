@@ -30,7 +30,8 @@
           "tank_level": "Tank level (%)",
           "tank_full": "Tank FULL float / probe",
           "tank_low": "Tank LOW float / probe",
-          "floats_invert": "Floats report the other way round"
+          "floats_invert": "Floats report the other way round",
+          "load_sensor": "Load sharing – spare capacity (kVA)"
         },
         "data_description": {
           "pump_power": "Shelly power, or the VFD's output power. Used for dry-run / overload protection and energy.",
@@ -44,7 +45,8 @@
           "tank_level": "Borehole: the tank being filled. Pressure pump / irrigation: the supply tank (protects the pump when it runs low).",
           "tank_full": "ON when the tank is full.",
           "tank_low": "ON when the tank is low / empty.",
-          "floats_invert": "Tick if your floats are ON when the water is NOT at that point."
+          "floats_invert": "Tick if your floats are ON when the water is NOT at that point.",
+          "load_sensor": "Panel meter at the supply: spare kVA left on the transformer / NMD (or the load in use – choose which in Installer settings). The pump stops when spare capacity runs low and restarts when it is back – for sharing a supply between pumps and houses."
         }
       },
       "zones": {
@@ -99,7 +101,8 @@
           "tank_level": "Tank level (%)",
           "tank_full": "Tank FULL float / probe",
           "tank_low": "Tank LOW float / probe",
-          "floats_invert": "Floats report the other way round"
+          "floats_invert": "Floats report the other way round",
+          "load_sensor": "Load sharing – spare capacity (kVA)"
         },
         "data_description": {
           "pump_power": "Shelly power, or the VFD's output power. Used for dry-run / overload protection and energy.",
@@ -113,7 +116,8 @@
           "tank_level": "Borehole: the tank being filled. Pressure pump / irrigation: the supply tank (protects the pump when it runs low).",
           "tank_full": "ON when the tank is full.",
           "tank_low": "ON when the tank is low / empty.",
-          "floats_invert": "Tick if your floats are ON when the water is NOT at that point."
+          "floats_invert": "Tick if your floats are ON when the water is NOT at that point.",
+          "load_sensor": "Panel meter at the supply: spare kVA left on the transformer / NMD (or the load in use – choose which in Installer settings). The pump stops when spare capacity runs low and restarts when it is back – for sharing a supply between pumps and houses."
         }
       },
       "zones": {

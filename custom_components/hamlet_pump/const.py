@@ -1,6 +1,6 @@
 """Constants for Hamlet Pump."""
 DOMAIN = "hamlet_pump"
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 
 PANEL_URL_PATH = "hamlet-pump"
 PANEL_COMPONENT = "hamlet-pump-panel"
@@ -23,6 +23,7 @@ CONF_TANK_LOW = "tank_low"             # float / probe: ON when low
 CONF_FLOATS_INVERT = "floats_invert"   # floats report the other way round
 CONF_ZONES = "zones"                   # irrigation valves (switch / valve entities)
 CONF_RAIN = "rain_sensor"              # rain / wet sensor (on or > 0 = wet)
+CONF_LOAD = "load_sensor"              # panel meter: spare kVA on the supply (or the load in use) – load sharing
 
 TYPE_BOREHOLE = "borehole"
 TYPE_BOOSTER = "booster"
@@ -31,7 +32,7 @@ PUMP_TYPES = [TYPE_BOREHOLE, TYPE_BOOSTER, TYPE_IRRIGATION]
 
 SENSOR_KEYS = [
     CONF_PUMP_POWER, CONF_PUMP_CURRENT, CONF_PUMP_HZ, CONF_RUNNING, CONF_VFD_FAULT, CONF_PRESSURE,
-    CONF_FLOW, CONF_WATER_TOTAL, CONF_TANK_LEVEL, CONF_TANK_FULL, CONF_TANK_LOW,
+    CONF_FLOW, CONF_WATER_TOTAL, CONF_TANK_LEVEL, CONF_TANK_FULL, CONF_TANK_LOW, CONF_LOAD,
 ]
 
 SIGNAL_UPDATE = f"{DOMAIN}_update_{{}}"

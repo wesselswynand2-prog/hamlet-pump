@@ -288,3 +288,54 @@ def test_resume_filling_after_rest_between_levels():
     assert d.status == "Resting"
     d, _ = run({"level": 60, "is_on": False, "running": False}, s, st, T0 + timedelta(minutes=31))
     assert d.on   # carries on filling to the stop level
+
+
+# ---------------------------------------------------------------- load sharing
+def test_load_sharing_two_pumps_drop_out_and_return_one_at_a_time():
+    a = S(shed_below_kva=10, restore_above_kva=25, shed_seconds=10, restore_minutes=5)   # stops first
+    b = S(shed_below_kva=5, restore_above_kva=18, shed_seconds=10, restore_minutes=8)    # stops last
+    sa, sb = logic.State(), logic.State()
+    base = {"mode": "on", "is_on": True, "running": True, "load_sensor": True}
+
+    def step(spare, t):
+        da = logic.decide(logic.Inputs(now=T0 + timedelta(seconds=t), spare_kva=spare, **base), a, sa)
+        db = logic.decide(logic.Inputs(now=T0 + timedelta(seconds=t), spare_kva=spare, **base), b, sb)
+        return da.on, db.on
+
+    assert step(30, 0) == (True, True)
+    assert step(8, 10) == (True, True)       # short dip (motor start) is ignored
+    assert step(8, 25) == (False, True)      # stayed low 15 s -> pump A drops out
+    assert step(3, 30) == (False, True)
+    assert step(3, 45) == (False, False)     # still too little -> pump B too
+    d = logic.decide(logic.Inputs(now=T0 + timedelta(seconds=45), spare_kva=3, **base), b, sb)
+    assert d.status == "Load shed" and "3.0 kVA" in d.reason and d.tripped
+    assert step(20, 60) == (False, False)    # B needs 18 kVA for 8 min, A needs 25
+    assert step(20, 60 + 8 * 60 + 5) == (False, True)   # B back first
+    assert step(26, 600) == (False, True)
+    assert step(26, 600 + 5 * 60 + 5) == (True, True)
+
+
+def test_load_sharing_off_without_sensor_or_levels():
+    d, st = run({"mode": "on", "is_on": True, "running": True, "spare_kva": 1, "load_sensor": True})
+    assert d.on and not st.shed           # levels 0 = off
+    d, st = run({"mode": "on", "is_on": True, "running": True}, S(shed_below_kva=10, restore_above_kva=20))
+    assert d.on                            # no sensor configured
+
+
+def test_load_shed_meter_offline_keeps_pump_off_and_borehole_resumes():
+    s = S(shed_below_kva=10, restore_above_kva=20, shed_seconds=0, restore_minutes=0)
+    st = logic.State()
+    d, st = run({"level": 60, "is_on": True, "running": True, "spare_kva": 4, "load_sensor": True}, s, st)
+    assert not d.on and st.shed and st.resume
+    d, st = run({"level": 60, "is_on": False, "running": False, "spare_kva": None, "load_sensor": True}, s, st, T0 + timedelta(minutes=1))
+    assert not d.on and "isn't reporting" in d.reason
+    d, st = run({"level": 60, "is_on": False, "running": False, "spare_kva": 22, "load_sensor": True}, s, st, T0 + timedelta(minutes=2))
+    assert d.on and d.status == "Filling"   # carries on filling between start and stop level
+
+
+def test_load_settings_validation():
+    with pytest.raises(ValueError):
+        logic.validate_settings({"shed_below_kva": 10, "restore_above_kva": 8}, True)
+    assert logic.validate_settings({"load_mode": "used", "supply_kva": 100}, True)["load_mode"] == "used"
+    with pytest.raises(ValueError):
+        logic.validate_settings({"load_mode": "x"}, True)
